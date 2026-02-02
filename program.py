@@ -13,7 +13,7 @@ def extract_transcript_text(transcript_data: list[dict], join_with: str = " ") -
     Returns:
         Clean string of just the spoken words
     """
-    text_segments = [entry['text'] for entry in transcript_data if 'text' in entry]
+    text_segments = [entry['text'].replace('\n', ' ') for entry in transcript_data if 'text' in entry]
     return join_with.join(text_segments)
 
 videos = {
@@ -24,7 +24,7 @@ videos = {
 }
 
 ytt_api = YouTubeTranscriptApi()
-yt_fetch = ytt_api.fetch(videos.get("MIT Chemistry Lecture"))
+yt_fetch = ytt_api.fetch(videos.get("Mr. Beast Video"))
 
 tokenizer = AutoTokenizer.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
 model = AutoModelForSequenceClassification.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
