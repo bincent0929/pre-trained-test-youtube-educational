@@ -16,12 +16,15 @@ def extract_transcript_text(transcript_data: list[dict], join_with: str = " ") -
     text_segments = [entry['text'] for entry in transcript_data if 'text' in entry]
     return join_with.join(text_segments)
 
-#video_id = "aKTOS0Nrlug"
-#video_id = "pAnGwRiQ4-4"
-#video_id = "Y0Oa4Lp5fLE"
-video_id = "di0KgqNDqhA"
+videos = {
+    "MIT Chemistry Lecture" : "aKTOS0Nrlug",
+    "Mr. Beast Video" : "pAnGwRiQ4-4",
+    "Behavioral Evlotion Stanford Video" : "Y0Oa4Lp5fLE",
+    "Stanford Introduction to Computers" : "di0KgqNDqhA"
+}
+
 ytt_api = YouTubeTranscriptApi()
-yt_fetch = ytt_api.fetch(video_id)
+yt_fetch = ytt_api.fetch(videos.get("MIT Chemistry Lecture"))
 
 tokenizer = AutoTokenizer.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
 model = AutoModelForSequenceClassification.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
