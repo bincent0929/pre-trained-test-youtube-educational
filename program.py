@@ -1,11 +1,36 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 from youtube_transcript_api import YouTubeTranscriptApi
+# this is a fragile library
 from pytubefix import YouTube as yt_info_grab
 
+import os
 import sqlite3
 
 DB_PATH = 'results.db'
+
+def init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS results (
+                video_id TEXT NOT NULL,
+                video_title TEXT NOT NULL,
+                text TEXT NOT NULL,
+                model_used TEXT NOT NULL,
+                score REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+def save_result(result: dict): 
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "INSERT INTO results (video_id, video_title, text, model_used, score) VALUES (?, ?, ?, ?, ?)",
+            (result["video_id"], result["video_title"], result["text"], result["model_used"], result["score"])
+        )
+
+if not os.path.exists(DB_PATH):
+    init_db()
 
 def extract_transcript_text(transcript_data: list[dict], join_with: str = " ") -> str:
     """
@@ -22,26 +47,30 @@ def extract_transcript_text(transcript_data: list[dict], join_with: str = " ") -
     text_segments = [entry['text'].replace('\n', ' ') for entry in transcript_data if 'text' in entry]
     return join_with.join(text_segments)
 
-def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS results (
-                video_id TEXT NOT NULL,
-                text TEXT NOT NULL,
-                score REAL NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
 video_ids = ["aKTOS0Nrlug", "pAnGwRiQ4-4", "Y0Oa4Lp5fLE", "di0KgqNDqhA", "_C-ZzlGS8Vk", "HAnw168huqA"]
+
+def video_exists(video_id: str):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute(
+            "SELECT 1 FROM results WHERE video_id = ? LIMIT 1",
+            (video_id,)
+        )
+
+        if cursor.fetchone() is None:
+            return
+
+        
+        
+
 
 ytt_api = YouTubeTranscriptApi()
 
 yt_info = yt_info_grab(f"https://www.youtube.com/watch?v={video_ids[0]}")
 yt_fetch = ytt_api.fetch(video_ids[0], languages=['en', 'en-US'])
 
-tokenizer = AutoTokenizer.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
-model = AutoModelForSequenceClassification.from_pretrained("HuggingFaceTB/fineweb-edu-classifier")
+model_name = "HuggingFaceTB/fineweb-edu-classifier"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
 text = extract_transcript_text(yt_fetch.to_raw_data())
 inputs = tokenizer(str(text), return_tensors="pt", padding="longest", truncation=True)
@@ -50,11 +79,13 @@ logits = outputs.logits.squeeze(-1).float().detach().numpy()
 score = logits.item()
 
 result = {
-    "text": text,
     "video_id": yt_fetch.video_id,
     "video_title": yt_info.title,
+    "text": text,
+    "model_used": model_name,
     "score": score,
 }
 
 print(result)
+save_result(result)
 # {'text': 'This is a test sentence.', 'score': 0.07964489609003067, 'int_score': 0}
