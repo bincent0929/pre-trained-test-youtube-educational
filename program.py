@@ -5,6 +5,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from pytubefix import YouTube as yt_info_grab
 
 import os
+# very much think I want to change this out for tinydb
+# to avoid sql syntax
 import sqlite3
 
 DB_PATH = 'results.db'
@@ -15,6 +17,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS results (
                 video_id TEXT NOT NULL,
                 video_title TEXT NOT NULL,
+                channel_name TEXT NOT NULL,
                 text TEXT NOT NULL,
                 model_used TEXT NOT NULL,
                 score REAL NOT NULL,
@@ -25,8 +28,8 @@ def init_db():
 def save_result(result: dict): 
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
-            "INSERT INTO results (video_id, video_title, text, model_used, score) VALUES (?, ?, ?, ?, ?)",
-            (result["video_id"], result["video_title"], result["text"], result["model_used"], result["score"])
+            "INSERT INTO results (video_id, video_title, channel_name, text, model_used, score) VALUES (?, ?, ?, ?, ?, ?)",
+            (result["video_id"], result["video_title"], result["channel_name"], result["text"], result["model_used"], result["score"])
         )
 
 if not os.path.exists(DB_PATH):
@@ -47,45 +50,57 @@ def extract_transcript_text(transcript_data: list[dict], join_with: str = " ") -
     text_segments = [entry['text'].replace('\n', ' ') for entry in transcript_data if 'text' in entry]
     return join_with.join(text_segments)
 
-video_ids = ["aKTOS0Nrlug", "pAnGwRiQ4-4", "Y0Oa4Lp5fLE", "di0KgqNDqhA", "_C-ZzlGS8Vk", "HAnw168huqA"]
-
-def video_exists(video_id: str):
+def video_is_saved(video_id: str) -> bool:
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.execute(
-            "SELECT 1 FROM results WHERE video_id = ? LIMIT 1",
+            "SELECT video_id, video_title, channel_name, text, model_used, score FROM results WHERE video_id = ? LIMIT 1",
             (video_id,)
         )
+        row = cursor.fetchone()
 
-        if cursor.fetchone() is None:
-            return
+    if row is None:
+        return False
+    
+    print({
+        #"video_id": row[0],
+        "video_title": row[1],
+        "channel_name": row[2],
+        #"text": row[3],
+        #"model_used": row[4],
+        "score": row[5],
+    })
+    return True
 
-        
-        
+video_ids = ["aKTOS0Nrlug", "pAnGwRiQ4-4", "Y0Oa4Lp5fLE", "di0KgqNDqhA", "_C-ZzlGS8Vk", "HAnw168huqA"]
 
+for video in video_ids:
 
-ytt_api = YouTubeTranscriptApi()
+    if video_is_saved(video) is True:
+        continue
 
-yt_info = yt_info_grab(f"https://www.youtube.com/watch?v={video_ids[0]}")
-yt_fetch = ytt_api.fetch(video_ids[0], languages=['en', 'en-US'])
+    ytt_api = YouTubeTranscriptApi()
 
-model_name = "HuggingFaceTB/fineweb-edu-classifier"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    yt_info = yt_info_grab(f"https://www.youtube.com/watch?v={video}")
+    yt_fetch = ytt_api.fetch(video, languages=['en', 'en-US'])
 
-text = extract_transcript_text(yt_fetch.to_raw_data())
-inputs = tokenizer(str(text), return_tensors="pt", padding="longest", truncation=True)
-outputs = model(**inputs)
-logits = outputs.logits.squeeze(-1).float().detach().numpy()
-score = logits.item()
+    model_name = "HuggingFaceTB/fineweb-edu-classifier"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
-result = {
-    "video_id": yt_fetch.video_id,
-    "video_title": yt_info.title,
-    "text": text,
-    "model_used": model_name,
-    "score": score,
-}
+    text = extract_transcript_text(yt_fetch.to_raw_data())
+    inputs = tokenizer(str(text), return_tensors="pt", padding="longest", truncation=True)
+    outputs = model(**inputs)
+    logits = outputs.logits.squeeze(-1).float().detach().numpy()
+    score = logits.item()
 
-print(result)
-save_result(result)
-# {'text': 'This is a test sentence.', 'score': 0.07964489609003067, 'int_score': 0}
+    result = {
+        "video_id": yt_fetch.video_id,
+        "video_title": yt_info.title,
+        "channel_name": yt_info.author,
+        "text": text,
+        "model_used": model_name,
+        "score": score,
+    }
+
+    print(result)
+    save_result(result)
