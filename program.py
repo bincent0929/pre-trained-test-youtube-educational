@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 from youtube_transcript_api import YouTubeTranscriptApi
 # this is a fragile library
-from pytubefix import YouTube as yt_info_grab
+import yt_dlp
 
 import os
 # very much think I want to change this out for tinydb
@@ -71,7 +71,7 @@ def video_is_saved(video_id: str) -> bool:
     })
     return True
 
-video_ids = ["aKTOS0Nrlug", "pAnGwRiQ4-4", "Y0Oa4Lp5fLE", "di0KgqNDqhA", "_C-ZzlGS8Vk", "HAnw168huqA"]
+video_ids = ["aKTOS0Nrlug", "pAnGwRiQ4-4", "Y0Oa4Lp5fLE", "di0KgqNDqhA", "_C-ZzlGS8Vk", "HAnw168huqA", "nBtOEmUqASQ", "9pcrzvK_U0k", "-Y23nfAOiXQ"]
 
 for video in video_ids:
 
@@ -80,7 +80,18 @@ for video in video_ids:
 
     ytt_api = YouTubeTranscriptApi()
 
-    yt_info = yt_info_grab(f"https://www.youtube.com/watch?v={video}")
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'skip_download': True,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(f"https://www.youtube.com/watch?v={video}", download=False)
+    # 'Unknown' is the fallback value if a value isn't returned
+    title = info.get('title', 'Unknown')
+    channel_name = info.get('uploader', 'Unknown')
+
     yt_fetch = ytt_api.fetch(video, languages=['en', 'en-US'])
 
     model_name = "HuggingFaceTB/fineweb-edu-classifier"
@@ -95,8 +106,8 @@ for video in video_ids:
 
     result = {
         "video_id": yt_fetch.video_id,
-        "video_title": yt_info.title,
-        "channel_name": yt_info.author,
+        "video_title": title,
+        "channel_name": channel_name,
         "text": text,
         "model_used": model_name,
         "score": score,
