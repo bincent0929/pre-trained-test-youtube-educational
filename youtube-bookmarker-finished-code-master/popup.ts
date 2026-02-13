@@ -56,10 +56,11 @@ const onDelete = async e => {
 
   bookmarkElementToDelete.parentNode.removeChild(bookmarkElementToDelete);
 
-  chrome.tabs.sendMessage(activeTab.id, {
+  const response = await chrome.tabs.sendMessage(activeTab.id, {
     type: "DELETE",
     value: bookmarkTime,
-  }, viewBookmarks);
+  });
+  viewBookmarks(response);
 };
 
 const setBookmarkAttributes =  (src, eventListener, controlParentElement) => {

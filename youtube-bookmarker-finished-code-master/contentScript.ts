@@ -1,10 +1,21 @@
+interface Bookmark {
+  time: number;
+  desc: string;
+}
+
+interface BookmarkMessage {
+  type: "NEW" | "PLAY" | "DELETE";
+  value?: number;
+  videoId?: string;
+}
+
 (() => {
   let youtubeLeftControls, youtubePlayer;
   let currentVideo = "";
   let currentVideoBookmarks = [];
 
-  const fetchBookmarks = () => {
-    return new Promise((resolve) => {
+  const fetchBookmarks = (): Promise<Bookmark[]> => {
+    return new Promise<Bookmark[]>((resolve) => {
       chrome.storage.sync.get([currentVideo], (obj) => {
         resolve(obj[currentVideo] ? JSON.parse(obj[currentVideo]) : []);
       });
@@ -45,7 +56,7 @@
     }
   };
 
-  chrome.runtime.onMessage.addListener((obj, sender, response) => {
+  chrome.runtime.onMessage.addListener((obj:BookmarkMessage, sender, response): boolean | Promise<any> => {
     const { type, value, videoId } = obj; // I need to define this data type and then I should make good progress
 
     if (type === "NEW") {
@@ -58,6 +69,7 @@
       chrome.storage.sync.set({ [currentVideo]: JSON.stringify(currentVideoBookmarks) });
 
       response(currentVideoBookmarks);
+      return true;
     }
   });
 
