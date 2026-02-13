@@ -46,7 +46,7 @@
   };
 
   chrome.runtime.onMessage.addListener((obj, sender, response) => {
-    const { type, value, videoId } = obj;
+    const { type, value, videoId } = obj; // I need to define this data type and then I should make good progress
 
     if (type === "NEW") {
       currentVideo = videoId;
