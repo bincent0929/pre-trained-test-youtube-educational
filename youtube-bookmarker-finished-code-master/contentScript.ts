@@ -65,10 +65,12 @@ interface BookmarkMessage {
     } else if (type === "PLAY") {
       youtubePlayer.currentTime = value;
     } else if ( type === "DELETE") {
-      currentVideoBookmarks = currentVideoBookmarks.filter((b) => b.time != value);
-      chrome.storage.sync.set({ [currentVideo]: JSON.stringify(currentVideoBookmarks) });
-
-      response(currentVideoBookmarks);
+      (async () => {
+        const fresh = await fetchBookmarks();
+        currentVideoBookmarks = fresh.filter((b) => b.time != value);
+        chrome.storage.sync.set({ [currentVideo]: JSON.stringify(currentVideoBookmarks) });
+        response(currentVideoBookmarks);
+      })();
       return true;
     }
   });
