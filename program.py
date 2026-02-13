@@ -71,7 +71,16 @@ def video_is_saved(video_id: str) -> bool:
     })
     return True
 
-video_ids = ["aKTOS0Nrlug", "pAnGwRiQ4-4", "Y0Oa4Lp5fLE", "di0KgqNDqhA", "_C-ZzlGS8Vk", "HAnw168huqA", "nBtOEmUqASQ", "9pcrzvK_U0k", "-Y23nfAOiXQ"]
+video_ids = ["aKTOS0Nrlug",
+            "pAnGwRiQ4-4",
+            "Y0Oa4Lp5fLE",
+            "di0KgqNDqhA",
+            "_C-ZzlGS8Vk", 
+            "HAnw168huqA", 
+            "nBtOEmUqASQ", 
+            "9pcrzvK_U0k", 
+            "-Y23nfAOiXQ",
+            "9Ge0sMm65jo"]
 
 for video in video_ids:
 

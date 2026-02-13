@@ -1,4 +1,13 @@
+# Core dependencies
 transformers
 youtube_transcript_api
 torch
 yt-dlp
+
+# Fine-tuning and evaluation dependencies
+datasets
+scikit-learn
+
+# Optional but recommended for local training
+# accelerate  # Uncomment if training locally with mixed precision
+# tensorboard  # Uncomment for training visualization
